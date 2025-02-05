@@ -21,9 +21,9 @@ if str(ROOT) not in sys.path:
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
 from models.common import DetectMultiBackend
-from utils.datasets import IMG_FORMATS, VID_FORMATS, LoadImages, LoadStreams
+from utils.datasets import IMG_FORMATS, LoadImages, LoadStreams
 from utils.general import (LOGGER, check_file, check_img_size, check_imshow, check_requirements, colorstr,
-                           increment_path, non_max_suppression, print_args, scale_coords, strip_optimizer, xyxy2xywh)
+                           increment_path, non_max_suppression, print_args, scale_boxes, strip_optimizer, xyxy2xywh)
 from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import select_device, time_sync
 
@@ -251,7 +251,7 @@ class MainWindow(QTabWidget):
                     annotator = Annotator(im0, line_width=line_thickness, example=str(names))
                     if len(det):
                         # Rescale boxes from img_size to im0 size
-                        det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0.shape).round()
+                        det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0.shape).round()
 
                         # Print results
                         for c in det[:, -1].unique():
@@ -278,25 +278,18 @@ class MainWindow(QTabWidget):
                     LOGGER.info(f'{s}Done. ({t3 - t2:.3f}s)')
                     # Stream results
                     im0 = annotator.result()
-                    # if view_img:
-                    #     cv2.imshow(str(p), im0)
-                    #     cv2.waitKey(1)  # 1 millisecond
-                    # Save results (image with detections)
                     resize_scale = output_size / im0.shape[0]
                     im0 = cv2.resize(im0, (0, 0), fx=resize_scale, fy=resize_scale)
                     cv2.imwrite("images/tmp/single_result.jpg", im0)
-                    # 目前的情况来看，应该只是ubuntu下会出问题，但是在windows下是完整的，所以继续
                     self.right_img.setPixmap(QPixmap("images/tmp/single_result.jpg"))
-
-    # 视频检测，逻辑基本一致，有两个功能，分别是检测摄像头的功能和检测视频文件的功能，先做检测摄像头的功能。
 
     '''
     ### 界面关闭事件 ### 
     '''
     def closeEvent(self, event):
         reply = QMessageBox.question(self,
-                                     'quit',
-                                     "Are you sure?",
+                                     '退出程序',
+                                     "确定退出?",
                                      QMessageBox.Yes | QMessageBox.No,
                                      QMessageBox.No)
         if reply == QMessageBox.Yes:
@@ -304,22 +297,6 @@ class MainWindow(QTabWidget):
             event.accept()
         else:
             event.ignore()
-
-    '''
-    ### 视频关闭事件 ### 
-    '''
-
-    def open_cam(self):
-        self.webcam_detection_btn.setEnabled(False)
-        self.mp4_detection_btn.setEnabled(False)
-        self.vid_stop_btn.setEnabled(True)
-        self.vid_source = '0'
-        self.webcam = True
-        # 把按钮给他重置了
-        # print("GOGOGO")
-        th = threading.Thread(target=self.detect_vid)
-        th.start()
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
